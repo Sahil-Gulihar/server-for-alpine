@@ -3,6 +3,8 @@ const http = require("http");
 const WebSocket = require("ws");
 const { createClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
 const dotenv = require("dotenv");
+const multer = require('multer');
+const upload = multer().single('image');
 dotenv.config();
 
 const app = express();
@@ -65,7 +67,7 @@ wss.on("connection", (ws) => {
   console.log("ws: client connected");
   let deepgram = setupDeepgram(ws);
 
-  ws.on("message", (message) => {
+  ws.on("messadge", (message) => {
     console.log("ws: client data received");
 
     if (deepgram.getReadyState() === 1 /* OPEN */) {
@@ -96,6 +98,15 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
+app.post('/api/analyze-image', upload, (req, res) => {
+  // Access the uploaded image file through req.file
+  const imageFile = req.file;
+
+  // Perform image analysis using a library or service
+  const analysisResult = analyzeImage(imageFile);
+
+  res.json({ analysis: analysisResult });
+});
 server.listen(3000, () => {
   console.log("Server is listening on port 3000");
 });
