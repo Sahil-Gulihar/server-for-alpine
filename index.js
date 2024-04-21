@@ -9,6 +9,7 @@ dotenv.config();
 
 const cors = require('cors');
 
+const app = express();
 
 app.use(cors());
 app.options('*',cors());
@@ -21,7 +22,6 @@ var allowCrossDomain = function(req,res,next) {
 app.use(allowCrossDomain);
 
 
-const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
