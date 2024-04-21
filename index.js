@@ -134,13 +134,13 @@ function fileToGenerativePart(path, mimeType) {
 }
 
 // Image analysis route
-app.post("/api/analyze-image", upload, async (req, res) => {
-  if (!req.file) {
+app.post("/api/analyze-image", async (req, res) => {
+  if (!req.body) {
     return res.status(400).json({ error: 'No image file provided' });
   }
 
-  const filePath = req.file.path;
-  const fileName = req.file.filename;
+  const filePath = req.body.path;
+  const fileName = req.body.filename;
 
   try {
     // For text-and-image input (multimodal), use the gemini-pro-vision model
