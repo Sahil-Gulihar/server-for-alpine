@@ -151,6 +151,7 @@ app.post("/api/analyze-image", upload, async (req, res) => {
     const result = await model.generateContent([prompt, ...imageParts]);
     const response = await result.response;
     const analysisResult = response.text();
+    console.log(analysisResult);
 
     res.json({ analysis: analysisResult });
   } catch (error) {
