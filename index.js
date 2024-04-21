@@ -3,31 +3,37 @@ const http = require("http");
 const WebSocket = require("ws");
 const { createClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
 const dotenv = require("dotenv");
-const multer = require('multer');
-const upload = multer().single('image');
+const multer = require("multer");
+const upload = multer().single("image");
+const cors = require("cors");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require('fs');
+const path = require('path');
+
 dotenv.config();
 
-const cors = require('cors');
-
 const app = express();
-
-app.use(cors());
-app.options('*',cors());
-var allowCrossDomain = function(req,res,next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();  
-}
-app.use(allowCrossDomain);
-
-
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// CORS middleware
+app.use(cors());
+app.options("*", cors());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  next();
+});
+
+// Deepgram client
 const deepgramClient = createClient(process.env.DEEPGRAM_API_KEY);
 let keepAlive;
 
+// Google Generative AI client
+const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+
+// Deepgram setup
 const setupDeepgram = (ws) => {
   const deepgram = deepgramClient.listen.live({
     language: "en",
@@ -77,11 +83,12 @@ const setupDeepgram = (ws) => {
   return deepgram;
 };
 
+// WebSocket server
 wss.on("connection", (ws) => {
   console.log("ws: client connected");
   let deepgram = setupDeepgram(ws);
 
-  ws.on("messadge", (message) => {
+  ws.on("message", (message) => {
     console.log("ws: client data received");
 
     if (deepgram.getReadyState() === 1 /* OPEN */) {
@@ -107,29 +114,51 @@ wss.on("connection", (ws) => {
   });
 });
 
+// Serve static files
 app.use(express.static("public/"));
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
+  res.sendFile(path.join(__dirname, "/public/index.html"));
 });
 
-const analyzeImage = (imageFile) => {
-  // Implement your image analysis logic here
-  // You can use libraries like Tesseract.js for OCR or integrate with cloud services like Google Cloud Vision API
-  
-  // For demonstration purposes, let's return a sample analysis result
-  return "This is a sample analysis result.";
-};
+// Parse JSON request bodies
+app.use(express.json({ limit: "50mb" }));
 
-app.post('/api/analyze-image', upload, (req, res) => {
-  // Access the uploaded image file through req.file
-  const imageFile = req.file;
+// Helper function to convert local file to GoogleGenerativeAI.Part
+function fileToGenerativePart(path, mimeType) {
+  return {
+    inlineData: {
+      data: Buffer.from(fs.readFileSync(path)).toString("base64"),
+      mimeType
+    },
+  };
+}
 
-  // Perform image analysis using the analyzeImage function
-  const analysisResult = analyzeImage(imageFile);
+// Image analysis route
+app.post("/api/analyze-image", upload, async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image file provided' });
+  }
 
-  res.json({ analysis: analysisResult });
+  const filePath = req.file.path;
+  const fileName = req.file.filename;
+
+  try {
+    // For text-and-image input (multimodal), use the gemini-pro-vision model
+    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+    const prompt = "What's happening in the image";
+    const imageParts = [fileToGenerativePart(filePath, req.file.mimetype)];
+
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
+    const analysisResult = response.text();
+
+    res.json({ analysis: analysisResult });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: 'Failed to analyze the image' });
+  }
 });
+
 server.listen(3000, () => {
   console.log("Server is listening on port 3000");
 });
-
