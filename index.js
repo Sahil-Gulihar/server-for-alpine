@@ -7,7 +7,9 @@ const multer = require('multer');
 const upload = multer().single('image');
 dotenv.config();
 
-var cors = require(cors());
+const cors = require('cors');
+
+
 app.use(cors());
 app.options('*',cors());
 var allowCrossDomain = function(req,res,next) {
