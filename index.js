@@ -163,3 +163,30 @@ app.post("/api/analyze-image", async (req, res) => {
 server.listen(3000, () => {
   console.log("Server is listening on port 3000");
 });
+
+
+
+
+app.post("/api/analyze-text", (req, res) => {
+  const tData = req.body;
+
+  // Handle text analysis logic here
+  // For example, you can use natural language processing libraries like compromise or nlp.js
+  async function run() {
+    // For text-only input, use the gemini-pro model
+    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision"});
+  
+    const prompt = tData
+  
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    console.log(text);
+  }
+  
+  run();
+  // Assuming you have processed the text and obtained the analysis result
+  const analysisResult = text;
+
+  res.json({ data: analysisResult });
+});
