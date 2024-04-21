@@ -7,6 +7,18 @@ const multer = require('multer');
 const upload = multer().single('image');
 dotenv.config();
 
+var cors = require(cors());
+app.use(cors());
+app.options('*',cors());
+var allowCrossDomain = function(req,res,next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();  
+}
+app.use(allowCrossDomain);
+
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -98,11 +110,19 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
+const analyzeImage = (imageFile) => {
+  // Implement your image analysis logic here
+  // You can use libraries like Tesseract.js for OCR or integrate with cloud services like Google Cloud Vision API
+  
+  // For demonstration purposes, let's return a sample analysis result
+  return "This is a sample analysis result.";
+};
+
 app.post('/api/analyze-image', upload, (req, res) => {
   // Access the uploaded image file through req.file
   const imageFile = req.file;
 
-  // Perform image analysis using a library or service
+  // Perform image analysis using the analyzeImage function
   const analysisResult = analyzeImage(imageFile);
 
   res.json({ analysis: analysisResult });
